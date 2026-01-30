@@ -1,0 +1,8 @@
+version: 1.2
+workflows:
+  - name: Nomadic
+    subclass: WDL
+    primaryDescriptorPath: /Nomadic.wdl
+    readMePath: /Nomadic.README.md
+    testParameterFiles:
+      - /Nomadic.wdl
