@@ -6,7 +6,7 @@ workflow Nomadic {
         File metadata_file
         String experiment_name
         String reference_name
-        String? caller
+        String caller
         File region_bed
         Int memory_gb = 10
         Int disk_gb = 200
@@ -39,7 +39,7 @@ task RunNomadic {
         File metadata_file
         String experiment_name
         String reference_name
-        String? caller
+        String caller
         File region_bed
         Int memory_gb
         Int disk_gb
@@ -72,7 +72,7 @@ task RunNomadic {
             --region_bed ~{region_bed} \
             --fastq_dir fastq_data \
             --reference_name ~{reference_name} \
-            ~{"--caller " + caller} \
+            --caller ~{caller} \
             --output results/~{experiment_name}
 
         echo "Time elapsed: $(timestamp) - Finding output summary files:"
