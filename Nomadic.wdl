@@ -2,9 +2,12 @@ version 1.0
 
 workflow Nomadic {
     input {
-        String cloud_directory
-        File? metadata_file
+        String fastq_dir
+        File metadata_file
         String experiment_name
+        String reference_name
+        String? caller
+        File region_bed
         Int memory_gb = 10
         Int disk = 200
         String machine_type = "HDD"
@@ -12,25 +15,32 @@ workflow Nomadic {
 
     call RunNomadic {
         input:
-            cloud_directory = cloud_directory,
+            fastq_dir = fastq_dir,
             metadata_file = metadata_file,
             experiment_name = experiment_name,
+            reference_name = reference_name,
+            caller = caller,
+            region_bed = region_bed,
             memory_gb = memory_gb,
             disk = disk,
             machine_type = machine_type
     }
 
-    # TODO: Define outputs once we know the location of the summary files
-    #output {
-    #
-    #}
+    output {
+        File summary_read_mapping = RunNomadic.summary_read_mapping
+        File summary_region_coverage = RunNomadic.summary_region_coverage
+        File summary_variants = RunNomadic.summary_variants
+    }
 }
 
 task RunNomadic {
     input {
-        String cloud_directory
-        File? metadata_file
+        String fastq_dir
+        File metadata_file
         String experiment_name
+        String reference_name
+        String? caller
+        File region_bed
         Int memory_gb
         Int disk
         String machine_type
@@ -46,22 +56,27 @@ task RunNomadic {
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
 
+        # Copy the reference
+        echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
+        nomadic download --reference_name ~{reference_name}
 
-        # Copy the input directory from cloud storage
-        echo "Time elapsed: $(timestamp) - Copying data from ~{cloud_directory} to minknow_data/"
-        mkdir -p minknow_data
-        gsutil -m cp -r ~{cloud_directory}/* minknow_data/
+        # Copy the fastq directory from cloud storage
+        echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
+        mkdir -p fastq_data
+        gsutil -m cp -r ~{fastq_dir}/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
         nomadic process ~{experiment_name} \
-            ~{"-m " + metadata_file} \
-            -k "minknow_data"
+            --metadata_csv ~{metadata_file} \
+            --region_bed ~{region_bed} \
+            --fastq-dir fastq_data \
+            --reference_name ~{reference_name} \
+            ~{"--caller " + caller} \
+            --output results/~{experiment_name}
 
         echo "Time elapsed: $(timestamp) - Finding output summary files:"
-        find . -type f -name "*summary.read_mapping.csv"
-        find . -type f -name "*summary.region_coverage.csv"
-        find . -type f -name "*summary.variants.csv"
+        find ./results/~{experiment_name}/ -type f
     >>>
 
     runtime {
@@ -70,8 +85,9 @@ task RunNomadic {
         disks: "local-disk ~{disk} ~{machine_type}"
     }
 
-    # TODO: Define outputs once we know the location of the summary files
-    #output {
-    #    # Add your output files here
-    #}
+    output {
+        File summary_read_mapping = "./results/~{experiment_name}/~{experiment_name}.summary.read_mapping.csv"
+        File summary_region_coverage = "./results/~{experiment_name}/~{experiment_name}.summary.region_coverage.csv"
+        File summary_variants = "./results/~{experiment_name}/~{experiment_name}.summary.variants.csv"
+    }
 }
