@@ -70,7 +70,7 @@ task RunNomadic {
         nomadic process ~{experiment_name} \
             --metadata_csv ~{metadata_file} \
             --region_bed ~{region_bed} \
-            --fastq-dir fastq_data \
+            --fastq_dir fastq_data \
             --reference_name ~{reference_name} \
             ~{"--caller " + caller} \
             --output results/~{experiment_name}
