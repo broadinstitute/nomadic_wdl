@@ -2,7 +2,6 @@ version 1.0
 
 workflow Nomadic {
     input {
-        #Directory fastq_dir
         String fastq_dir
         File metadata_file
         String experiment_name
@@ -11,7 +10,7 @@ workflow Nomadic {
         File region_bed
         Int memory_gb = 10
         Int disk_gb = 200
-        String machine_type = "HDD"
+        String disk_type = "HDD"
     }
 
     call RunNomadic {
@@ -24,7 +23,7 @@ workflow Nomadic {
             region_bed = region_bed,
             memory_gb = memory_gb,
             disk_gb = disk_gb,
-            machine_type = machine_type
+            disk_type = disk_type
     }
 
     output {
@@ -36,7 +35,6 @@ workflow Nomadic {
 
 task RunNomadic {
     input {
-        #Directory fastq_dir
         String fastq_dir
         File metadata_file
         String experiment_name
@@ -45,10 +43,8 @@ task RunNomadic {
         File region_bed
         Int memory_gb
         Int disk_gb
-        String machine_type
+        String disk_type
     }
-
-    #Int disk_size_gb = ceil(3 * size(fastq_dir, "GiB")) + extra_disk_gb
 
     command <<<
         set -euo pipefail
@@ -86,7 +82,7 @@ task RunNomadic {
     runtime {
         docker: "us.gcr.io/broad-gotc-prod/nomadic:latest"
         memory: "~{memory_gb} GB"
-        disks: "local-disk ~{disk_gb} ~{machine_type}"
+        disks: "local-disk ~{disk_gb} ~{disk_type}"
     }
 
     output {
