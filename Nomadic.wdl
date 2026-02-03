@@ -1,15 +1,15 @@
-version 1.0
+version 1.1
 
 workflow Nomadic {
     input {
-        String fastq_dir
+        Directory fastq_dir
         File metadata_file
         String experiment_name
         String reference_name
         String? caller
         File region_bed
         Int memory_gb = 10
-        Int disk = 200
+        Int extra_disk_gb = 200
         String machine_type = "HDD"
     }
 
@@ -22,7 +22,7 @@ workflow Nomadic {
             caller = caller,
             region_bed = region_bed,
             memory_gb = memory_gb,
-            disk = disk,
+            extra_disk_gb = extra_disk_gb,
             machine_type = machine_type
     }
 
@@ -35,16 +35,18 @@ workflow Nomadic {
 
 task RunNomadic {
     input {
-        String fastq_dir
+        Directory fastq_dir
         File metadata_file
         String experiment_name
         String reference_name
         String? caller
         File region_bed
         Int memory_gb
-        Int disk
+        Int extra_disk_gb
         String machine_type
     }
+
+    Int disk_size_gb = ceil(3 * size(fastq_dir, "GiB")) + extra_disk_gb
 
     command <<<
         set -euo pipefail
@@ -61,16 +63,16 @@ task RunNomadic {
         nomadic download --reference_name ~{reference_name}
 
         # Copy the fastq directory from cloud storage
-        echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
-        mkdir -p fastq_data
-        gsutil -m cp -r ~{fastq_dir}/* fastq_data/
+        #echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
+        #mkdir -p fastq_data
+        #gsutil -m cp -r ~{fastq_dir}/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
         nomadic process ~{experiment_name} \
             --metadata_csv ~{metadata_file} \
             --region_bed ~{region_bed} \
-            --fastq-dir fastq_data \
+            --fastq-dir ~{fastq_dir} \
             --reference_name ~{reference_name} \
             ~{"--caller " + caller} \
             --output results/~{experiment_name}
@@ -82,7 +84,7 @@ task RunNomadic {
     runtime {
         docker: "us.gcr.io/broad-gotc-prod/nomadic:latest"
         memory: "~{memory_gb} GB"
-        disks: "local-disk ~{disk} ~{machine_type}"
+        disks: "local-disk ~{disk_size_gb} ~{machine_type}"
     }
 
     output {
