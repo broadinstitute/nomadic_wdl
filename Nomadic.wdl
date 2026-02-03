@@ -63,7 +63,7 @@ task RunNomadic {
         # Copy the fastq directory from cloud storage
         echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
         mkdir -p fastq_data
-        gsutil -m cp -r ~{fastq_dir}/* fastq_data/
+        gsutil -q -m cp -r ~{fastq_dir}/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"

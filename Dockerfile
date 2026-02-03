@@ -34,6 +34,7 @@ RUN apt-get update \
 # Notes:
 # - Use mamba for faster/better dependency solving
 # - Pin python=3.11 to avoid dependency incompatibilities with newer Python versions
+# - Explicitly install gsl (GNU Scientific Library) required by bcftools
 # - Let nomadic pull in its own samtools dependency
 RUN conda config --system --remove-key channels || true \
  && conda config --system --add channels conda-forge \
@@ -42,6 +43,8 @@ RUN conda config --system --remove-key channels || true \
  && mamba create -n "${CONDA_ENV}" -y \
         python=3.11 \
         bioconda::nomadic \
+        bioconda::bcftools \
+        conda-forge::gsl \
  && conda clean -a -f
 
 # Make the env the default.
@@ -50,6 +53,7 @@ ENV PATH=/opt/conda/envs/${CONDA_ENV}/bin:/opt/conda/bin:$PATH
 # Sanity checks at build time.
 RUN nomadic --help >/dev/null \
  && samtools --version | head -n 2 \
+ && bcftools --version | head -n 2 \
  && gsutil version -l | head -n 20 \
  && python --version
 
