@@ -8,7 +8,7 @@ workflow Nomadic {
         String reference_name
         String caller
         File region_bed
-        Int memory_gb = 10
+        Int memory_gb = 16
         Int disk_gb = 200
         String disk_type = "HDD"
     }
@@ -63,7 +63,7 @@ task RunNomadic {
         # Copy the fastq directory from cloud storage
         echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
         mkdir -p fastq_data
-        gcloud alpha storage cp -r ~{fastq_dir}/* fastq_data/
+        gsutil -m cp -r ~{fastq_dir}/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"

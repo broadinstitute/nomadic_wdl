@@ -33,12 +33,14 @@ RUN apt-get update \
 # Configure channels and install nomadic from bioconda.
 # Notes:
 # - Use mamba for faster/better dependency solving
+# - Pin python=3.11 to avoid dependency incompatibilities with newer Python versions
 # - Let nomadic pull in its own samtools dependency
 RUN conda config --system --remove-key channels || true \
  && conda config --system --add channels conda-forge \
  && conda config --system --add channels bioconda \
  && conda config --system --add channels defaults \
  && mamba create -n "${CONDA_ENV}" -y \
+        python=3.11 \
         bioconda::nomadic \
  && conda clean -a -f
 
