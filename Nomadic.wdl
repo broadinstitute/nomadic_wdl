@@ -72,6 +72,10 @@ task RunNomadic {
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
 
+        # Normalize bucket name (remove gs:// prefix if present)
+        BUCKET_NAME="~{bucket_name}"
+        BUCKET_NAME="${BUCKET_NAME#gs://}"
+
         # Copy the reference
         echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
         nomadic download --reference_name ~{reference_name}
@@ -93,7 +97,7 @@ task RunNomadic {
 
         # Generate timestamped output path
         timestamp_for_path=$(date +%Y_%m_%d_%H_%M)
-        OUTPUT_PATH="gs://~{bucket_name}/~{experiment_name}/run_${timestamp_for_path}/"
+        OUTPUT_PATH="gs://${BUCKET_NAME}/~{experiment_name}/run_${timestamp_for_path}/"
         echo "${OUTPUT_PATH}" > output_path.txt
 
         # Copy results to output path
