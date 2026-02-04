@@ -72,9 +72,10 @@ task RunNomadic {
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
 
-        # Normalize bucket name (remove gs:// prefix if present)
+        # Normalize bucket name (remove gs:// prefix and trailing slash if present)
         BUCKET_NAME="~{bucket_name}"
         BUCKET_NAME="${BUCKET_NAME#gs://}"
+        BUCKET_NAME="${BUCKET_NAME%/}"
 
         # Copy the reference
         echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
