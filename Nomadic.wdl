@@ -33,17 +33,6 @@ workflow Nomadic {
 
     output {
         String output_path = RunNomadic.output_path
-        String summary_variants = output_path + "summary.variants.csv"
-        String metadata_lowcomplexity_mask_bed = output_path + "metadata/nomadsMVP.amplicons.lowcomplexity_mask.bed"
-        String metadata_settings_json = output_path + "metadata/settings.json"
-        String metadata_amplicons_bed = output_path + "metadata/nomadsMVP.amplicons.bed"
-        String metadata_samples_csv = output_path + "metadata/samples.csv"
-        String summary_fastqs_processed = output_path + "summary.fastqs_processed.csv"
-        String summary_depth_profiles = output_path + "summary.depth_profiles.csv"
-        String summary_region_coverage = output_path + "summary.region_coverage.csv"
-        String summary_read_mapping = output_path + "summary.read_mapping.csv"
-        String vcf_summary_variants = output_path + "vcfs/summary.variants.vcf.gz"
-        String vcf_summary_variants_filtered = output_path + "vcfs/summary.variants.filtered.annotated.vcf.gz"
     }
 }
 
