@@ -33,6 +33,7 @@ workflow Nomadic {
 
     # Determine region_bed based on organism or use provided value
     File final_region_bed = if defined(organism) then (
+        # TODO: Update paths to point to the correct bucket and files once they are finalized
         if select_first([organism]) == "pfalciparum" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsMVP.amplicons.bed"
         else if select_first([organism]) == "agambiae" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsIR.amplicons.bed"
         else select_first([region_bed])
