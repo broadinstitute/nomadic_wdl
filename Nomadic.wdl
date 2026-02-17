@@ -2,12 +2,13 @@ version 1.0
 
 workflow Nomadic {
     input {
+        String? organism
         String fastq_dir
         File metadata_file
         String experiment_name
-        String reference_name
-        String caller
-        File region_bed
+        String? reference_name
+        String? caller
+        File? region_bed
         String bucket_name
         # TODO do we want to set a default true/false value here if one option is more common?
         Boolean preserve_barcode_files
@@ -16,14 +17,35 @@ workflow Nomadic {
         String disk_type = "HDD"
     }
 
+    # Determine reference_name based on organism or use provided value
+    String final_reference_name = if defined(organism) then (
+        if select_first([organism]) == "pfalciparum" then "Pf3D7"
+        else if select_first([organism]) == "agambiae" then "AgPEST"
+        else select_first([reference_name])
+    ) else select_first([reference_name])
+
+    # Determine caller based on organism or use provided value
+    String final_caller = if defined(organism) then (
+        if select_first([organism]) == "pfalciparum" then "delve"
+        else if select_first([organism]) == "agambiae" then "bcftools"
+        else select_first([caller])
+    ) else select_first([caller])
+
+    # Determine region_bed based on organism or use provided value
+    File final_region_bed = if defined(organism) then (
+        if select_first([organism]) == "pfalciparum" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsMVP.amplicons.bed"
+        else if select_first([organism]) == "agambiae" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsIR.amplicons.bed"
+        else select_first([region_bed])
+    ) else select_first([region_bed])
+
     call RunNomadic {
         input:
             fastq_dir = fastq_dir,
             metadata_file = metadata_file,
             experiment_name = experiment_name,
-            reference_name = reference_name,
-            caller = caller,
-            region_bed = region_bed,
+            reference_name = final_reference_name,
+            caller = final_caller,
+            region_bed = final_region_bed,
             bucket_name = bucket_name,
             preserve_barcode_files = preserve_barcode_files,
             memory_gb = memory_gb,
