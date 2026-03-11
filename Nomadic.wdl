@@ -13,7 +13,7 @@ workflow Nomadic {
         # TODO do we want to set a default true/false value here if one option is more common?
         Boolean preserve_barcode_files
         Int memory_gb = 4
-        Int disk_gb = 100
+        Int disk_gb = 20
         String disk_type = "HDD"
     }
 
