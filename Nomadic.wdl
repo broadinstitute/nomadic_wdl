@@ -14,7 +14,6 @@ workflow Nomadic {
         Boolean preserve_barcode_files
         Int memory_gb = 4
         Int disk_gb = 20
-        String disk_type = "HDD"
     }
 
     # Determine reference_name based on organism or use provided value
@@ -50,8 +49,7 @@ workflow Nomadic {
             bucket_name = bucket_name,
             preserve_barcode_files = preserve_barcode_files,
             memory_gb = memory_gb,
-            disk_gb = disk_gb,
-            disk_type = disk_type
+            disk_gb = disk_gb
     }
 
     output {
@@ -71,7 +69,6 @@ task RunNomadic {
         Boolean preserve_barcode_files
         Int memory_gb
         Int disk_gb
-        String disk_type
     }
 
     command <<<
@@ -130,7 +127,7 @@ task RunNomadic {
     runtime {
         docker: "us.gcr.io/broad-gotc-prod/nomadic:latest"
         memory: "~{memory_gb} GB"
-        disks: "local-disk ~{disk_gb} ~{disk_type}"
+        disks: "local-disk ~{disk_gb} HDD"
     }
 
     output {
