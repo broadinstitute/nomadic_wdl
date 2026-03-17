@@ -86,14 +86,18 @@ task RunNomadic {
         BUCKET_NAME="${BUCKET_NAME#gs://}"
         BUCKET_NAME="${BUCKET_NAME%/}"
 
+        # Normalize fastq_dir (remove trailing slash if present)
+        FASTQ_DIR="~{fastq_dir}"
+        FASTQ_DIR="${FASTQ_DIR%/}"
+
         # Copy the reference
         echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
         nomadic download --reference_name ~{reference_name}
 
         # Copy the fastq directory from cloud storage
-        echo "Time elapsed: $(timestamp) - Copying data from ~{fastq_dir} to fastq_data/"
+        echo "Time elapsed: $(timestamp) - Copying data from $FASTQ_DIR to fastq_data/"
         mkdir -p fastq_data
-        gsutil -q -m cp -r ~{fastq_dir}/* fastq_data/
+        gsutil -q -m cp -r $FASTQ_DIR/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
