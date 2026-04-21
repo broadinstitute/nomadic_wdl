@@ -9,7 +9,7 @@ This repo includes a simple Docker image that contains:
 
 ## Build
 
-### Apple Silicon (M1/M2/M3)
+### Apple Silicon (M1 and newer)
 
 Bioconda’s `samtools/htslib` dependency chain for `nomadic` is much more reliable on `linux/amd64` than `linux/arm64`.
 Build the image for `linux/amd64`:
@@ -50,3 +50,28 @@ docker run -it --rm -v "$PWD":/work nomadic:latest
 - `gsutil` is provided by the Google Cloud CLI (`google-cloud-cli`) via apt
   - Installed separately from conda to avoid python_abi pinning conflicts
 - `samtools >=1.20` is automatically pulled in as a dependency of nomadic
+
+## Push to GCR
+
+If you want to publish this image to:
+
+`us.gcr.io/broad-gotc-prod/nomadic:latest`
+
+1. Build locally (Apple Silicon users should keep `--platform=linux/amd64` as shown above).
+2. Tag the local image with the GCR repository path.
+3. Authenticate Docker to push to `us.gcr.io`.
+4. Push the image.
+
+```sh
+docker tag nomadic:latest us.gcr.io/broad-gotc-prod/nomadic:latest
+gcloud auth login
+gcloud auth configure-docker us.gcr.io
+docker push us.gcr.io/broad-gotc-prod/nomadic:latest
+```
+
+Optional: also push a dated or release tag for reproducibility.
+
+```sh
+docker tag nomadic:latest us.gcr.io/broad-gotc-prod/nomadic:2026-04-21
+docker push us.gcr.io/broad-gotc-prod/nomadic:2026-04-21
+```

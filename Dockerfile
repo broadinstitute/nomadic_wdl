@@ -42,7 +42,7 @@ RUN conda config --system --remove-key channels || true \
  && conda config --system --add channels defaults \
  && mamba create -n "${CONDA_ENV}" -y \
         python=3.11 \
-        bioconda::nomadic \
+        bioconda::nomadic=0.8.0 \
         bioconda::bcftools \
         conda-forge::gsl \
  && conda clean -a -f
