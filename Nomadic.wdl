@@ -4,6 +4,7 @@ workflow Nomadic {
     input {
         String? organism
         String? fastq_dir
+        # Input should be something like "gs://{bucket}/minknow/{experiment_name}/"
         String? minknow_dir
         File? metadata_file
         String experiment_name
@@ -66,7 +67,7 @@ workflow Nomadic {
             reference_name = final_reference_name,
             caller = final_caller,
             region_bed = final_region_bed,
-            bucket_name = bucket_name,
+            bucket_name = normalized_bucket_name,
             preserve_barcode_files = preserve_barcode_files,
             memory_gb = memory_gb,
             disk_gb = disk_gb
@@ -101,11 +102,6 @@ task RunNomadic {
             local elapsed=$((now - START_TIME))
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
-
-        # Normalize bucket name (remove gs:// prefix and trailing slash if present)
-        BUCKET_NAME="~{bucket_name}"
-        BUCKET_NAME="${BUCKET_NAME#gs://}"
-        BUCKET_NAME="${BUCKET_NAME%/}"
 
         # Normalize fastq_dir (remove trailing slash if present)
         FASTQ_DIR="~{fastq_dir}"
@@ -147,7 +143,7 @@ task RunNomadic {
 
         # Generate timestamped output path
         timestamp_for_path=$(date +%Y_%m_%d_%H_%M)
-        OUTPUT_PATH="gs://${BUCKET_NAME}/~{experiment_name}/run_${timestamp_for_path}/"
+        OUTPUT_PATH="gs://~{bucket_name}/~{experiment_name}/run_${timestamp_for_path}/"
         echo "${OUTPUT_PATH}" > output_path.txt
 
         # Copy results to output path
