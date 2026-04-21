@@ -4,7 +4,7 @@ workflow Nomadic {
     input {
         String? organism
         String? fastq_dir
-        # Input should be something like "gs://{bucket}/minknow/{experiment_name}/"
+        # Input should be something like "gs://{bucket}/minknow/{experiment_name}" (trailing slash optional)
         String? minknow_dir
         File? metadata_file
         String experiment_name
