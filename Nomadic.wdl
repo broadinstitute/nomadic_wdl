@@ -55,7 +55,7 @@ workflow Nomadic {
     # Use provided metadata_file or default to gs://metadata/{experiment_name}.csv.
     File final_metadata_file = if defined(metadata_file) then (
         select_first([metadata_file])
-    ) else "gs://metadata/" + experiment_name + ".csv"
+    ) else "gs://" + normalized_bucket_name + "/metadata/" + experiment_name + ".csv"
 
     call RunNomadic {
         input:
