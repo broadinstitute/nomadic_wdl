@@ -120,7 +120,7 @@ task RunNomadic {
             echo "Time elapsed: $(timestamp) - Copying MinKNOW data from $MINKNOW_DIR to minknow_data/"
             mkdir -p minknow_data
             gsutil -q -m cp -r "$MINKNOW_DIR"/* minknow_data/
-            INPUT_ARGS=(--minknow-dir minknow_data)
+            INPUT_ARGS=(--minknow_dir minknow_data)
         elif [[ -n "$FASTQ_DIR" ]]; then
             echo "Time elapsed: $(timestamp) - Copying FASTQ data from $FASTQ_DIR to fastq_data/"
             mkdir -p fastq_data
