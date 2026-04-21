@@ -3,8 +3,10 @@ version 1.0
 workflow Nomadic {
     input {
         String? organism
-        String fastq_dir
-        File metadata_file
+        String? fastq_dir
+        # Input should be something like "gs://{bucket}/minknow/{experiment_name}" (trailing slash optional)
+        String? minknow_dir
+        File? metadata_file
         String experiment_name
         String? reference_name
         String? caller
@@ -38,15 +40,34 @@ workflow Nomadic {
         else select_first([region_bed])
     ) else select_first([region_bed])
 
+    # Normalize bucket_name by removing gs:// and any trailing slash.
+    String normalized_bucket_name = sub(sub(bucket_name, "^gs://", ""), "/$", "")
+
+    # Use provided fastq_dir when present; otherwise keep it empty.
+    String final_fastq_dir = if defined(fastq_dir) then (select_first([fastq_dir])) else ""
+
+    # Use provided minknow_dir; if absent and fastq_dir is absent, derive a default minknow path.
+    String final_minknow_dir = if defined(minknow_dir) then (
+        select_first([minknow_dir])
+    ) else if defined(fastq_dir) then "" else (
+        "gs://" + normalized_bucket_name + "/minknow/" + experiment_name
+    )
+
+    # Use provided metadata_file or default to gs://{normalized_bucket_name}/metadata/{experiment_name}.csv.
+    File final_metadata_file = if defined(metadata_file) then (
+        select_first([metadata_file])
+    ) else "gs://" + normalized_bucket_name + "/metadata/" + experiment_name + ".csv"
+
     call RunNomadic {
         input:
-            fastq_dir = fastq_dir,
-            metadata_file = metadata_file,
+            fastq_dir = final_fastq_dir,
+            minknow_dir = final_minknow_dir,
+            metadata_file = final_metadata_file,
             experiment_name = experiment_name,
             reference_name = final_reference_name,
             caller = final_caller,
             region_bed = final_region_bed,
-            bucket_name = bucket_name,
+            bucket_name = normalized_bucket_name,
             preserve_barcode_files = preserve_barcode_files,
             memory_gb = memory_gb,
             disk_gb = disk_gb
@@ -60,6 +81,7 @@ workflow Nomadic {
 task RunNomadic {
     input {
         String fastq_dir
+        String minknow_dir
         File metadata_file
         String experiment_name
         String reference_name
@@ -81,37 +103,47 @@ task RunNomadic {
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
 
-        # Normalize bucket name (remove gs:// prefix and trailing slash if present)
-        BUCKET_NAME="~{bucket_name}"
-        BUCKET_NAME="${BUCKET_NAME#gs://}"
-        BUCKET_NAME="${BUCKET_NAME%/}"
-
         # Normalize fastq_dir (remove trailing slash if present)
         FASTQ_DIR="~{fastq_dir}"
         FASTQ_DIR="${FASTQ_DIR%/}"
 
+        # Normalize minknow_dir (remove trailing slash if present)
+        MINKNOW_DIR="~{minknow_dir}"
+        MINKNOW_DIR="${MINKNOW_DIR%/}"
+
+        declare -a INPUT_ARGS
+        if [[ -n "$MINKNOW_DIR" ]]; then
+            echo "Time elapsed: $(timestamp) - Copying MinKNOW data from $MINKNOW_DIR to minknow_data/"
+            mkdir -p minknow_data
+            gsutil -q -m cp -r "$MINKNOW_DIR"/* minknow_data/
+            INPUT_ARGS=(--minknow_dir minknow_data)
+        elif [[ -n "$FASTQ_DIR" ]]; then
+            echo "Time elapsed: $(timestamp) - Copying FASTQ data from $FASTQ_DIR to fastq_data/"
+            mkdir -p fastq_data
+            gsutil -q -m cp -r "$FASTQ_DIR"/* fastq_data/
+            INPUT_ARGS=(--fastq_dir fastq_data)
+        else
+            echo "Time elapsed: $(timestamp) - ERROR: neither minknow_dir nor fastq_dir was provided" >&2
+            exit 1
+        fi
+
         # Copy the reference
         echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
         nomadic download --reference_name ~{reference_name}
-
-        # Copy the fastq directory from cloud storage
-        echo "Time elapsed: $(timestamp) - Copying data from $FASTQ_DIR to fastq_data/"
-        mkdir -p fastq_data
-        gsutil -q -m cp -r $FASTQ_DIR/* fastq_data/
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
         nomadic process ~{experiment_name} \
             --metadata_csv ~{metadata_file} \
             --region_bed ~{region_bed} \
-            --fastq_dir fastq_data \
+            "${INPUT_ARGS[@]}" \
             --reference_name ~{reference_name} \
             --caller ~{caller} \
             --output results/~{experiment_name}
 
         # Generate timestamped output path
         timestamp_for_path=$(date +%Y_%m_%d_%H_%M)
-        OUTPUT_PATH="gs://${BUCKET_NAME}/~{experiment_name}/run_${timestamp_for_path}/"
+        OUTPUT_PATH="gs://~{bucket_name}/~{experiment_name}/run_${timestamp_for_path}/"
         echo "${OUTPUT_PATH}" > output_path.txt
 
         # Copy results to output path
