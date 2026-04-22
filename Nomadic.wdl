@@ -170,10 +170,10 @@ task RunNomadic {
             echo "Time elapsed: $(timestamp) - Zipping outputs"
             if [ "~{preserve_barcode_files}" == "true" ]; then
                 # Zip all outputs, excluding only .incremental subdirectories
-                zip -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*'
+                zip -q -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*'
             else
                 # Zip all outputs, excluding both .incremental and barcode subdirectories
-                zip -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*' -x '*/barcode/*'
+                zip -q -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*' -x '*/barcode/*'
             fi
             ZIP_PATH="${OUTPUT_DIR}outputs.zip"
             gsutil -q cp outputs.zip "${ZIP_PATH}"
