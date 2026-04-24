@@ -19,7 +19,7 @@ ARG CONDA_ENV=nomadic
 # Install gsutil via Google Cloud SDK (apt), not conda.
 # This avoids python_abi pinning conflicts in conda, and is the most widely supported install path.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl gnupg zip \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && mkdir -p /etc/apt/keyrings \
  && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
     | gpg --dearmor -o /etc/apt/keyrings/cloud.google.gpg \
@@ -55,7 +55,6 @@ RUN nomadic --help >/dev/null \
  && samtools --version | head -n 2 \
  && bcftools --version | head -n 2 \
  && gsutil version -l | head -n 20 \
- && zip -v | head -n 2 \
  && python --version
 
 WORKDIR /work
