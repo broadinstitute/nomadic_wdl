@@ -8,14 +8,12 @@ workflow Nomadic {
         String? minknow_dir
         File? metadata_file
         String experiment_name
-        String run_name
         String? reference_name
         String? caller
         File? region_bed
         String bucket_name
         # TODO do we want to set a default true/false value here if one option is more common?
         Boolean preserve_barcode_files
-        Boolean zip_outputs = false
         Int memory_gb = 4
         Int disk_gb = 20
     }
@@ -66,20 +64,17 @@ workflow Nomadic {
             minknow_dir = final_minknow_dir,
             metadata_file = final_metadata_file,
             experiment_name = experiment_name,
-            run_name = run_name,
             reference_name = final_reference_name,
             caller = final_caller,
             region_bed = final_region_bed,
             bucket_name = normalized_bucket_name,
             preserve_barcode_files = preserve_barcode_files,
-            zip_outputs = zip_outputs,
             memory_gb = memory_gb,
             disk_gb = disk_gb
     }
 
     output {
-        String output_dir_path = RunNomadic.output_dir_path
-        String zipped_output_file = RunNomadic.zipped_output_file
+        String output_path = RunNomadic.output_path
     }
 }
 
@@ -89,13 +84,11 @@ task RunNomadic {
         String minknow_dir
         File metadata_file
         String experiment_name
-        String run_name
         String reference_name
         String caller
         File region_bed
         String bucket_name
         Boolean preserve_barcode_files
-        Boolean zip_outputs
         Int memory_gb
         Int disk_gb
     }
@@ -149,39 +142,22 @@ task RunNomadic {
             --output results/~{experiment_name}
 
         # Generate timestamped output path
-        date_str=$(date +%Y_%m_%d_%H_%M)
-        OUTPUT_DIR="gs://~{bucket_name}/output/~{run_name}/~{experiment_name}/${date_str}/"
-        echo "${OUTPUT_DIR}" > output_dir_path.txt
+        timestamp_for_path=$(date +%Y_%m_%d_%H_%M)
+        OUTPUT_PATH="gs://~{bucket_name}/~{experiment_name}/run_${timestamp_for_path}/"
+        echo "${OUTPUT_PATH}" > output_path.txt
 
         # Copy results to output path
-        echo "Time elapsed: $(timestamp) - Copying results to ${OUTPUT_DIR}"
+        echo "Time elapsed: $(timestamp) - Copying results to ${OUTPUT_PATH}"
 
         if [ "~{preserve_barcode_files}" == "true" ]; then
             # Copy all outputs, excluding only .incremental subdirectories
-            gsutil -m rsync -r -x '.*\.incremental/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
+            gsutil -m rsync -r -x '.*\.incremental/.*' ./results/~{experiment_name}/ "${OUTPUT_PATH}"
         else
             # Copy all outputs, excluding both .incremental and barcode subdirectories
-            gsutil -m rsync -r -x '.*\.incremental/.*|.*/barcode/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
+            gsutil -m rsync -r -x '.*\.incremental/.*|.*/barcode/.*' ./results/~{experiment_name}/ "${OUTPUT_PATH}"
         fi
 
         echo "Time elapsed: $(timestamp) - Copy complete"
-
-        if [ "~{zip_outputs}" == "true" ]; then
-            echo "Time elapsed: $(timestamp) - Zipping outputs"
-            if [ "~{preserve_barcode_files}" == "true" ]; then
-                # Zip all outputs, excluding only .incremental subdirectories
-                zip -q -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*'
-            else
-                # Zip all outputs, excluding both .incremental and barcode subdirectories
-                zip -q -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*' -x '*/barcode/*'
-            fi
-            ZIP_PATH="${OUTPUT_DIR}outputs.zip"
-            gsutil -q cp outputs.zip "${ZIP_PATH}"
-            echo "${ZIP_PATH}" > zipped_output_file.txt
-            echo "Time elapsed: $(timestamp) - Zip complete"
-        else
-            echo "" > zipped_output_file.txt
-        fi
     >>>
 
     runtime {
@@ -191,7 +167,6 @@ task RunNomadic {
     }
 
     output {
-        String output_dir_path = read_string("output_dir_path.txt")
-        String zipped_output_file = read_string("zipped_output_file.txt")
+        String output_path = read_string("output_path.txt")
     }
 }
