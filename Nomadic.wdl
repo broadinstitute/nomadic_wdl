@@ -15,9 +15,9 @@ workflow Nomadic {
         String bucket_name
         # TODO do we want to set a default true/false value here if one option is more common?
         Boolean preserve_barcode_files
-        Boolean zip_outputs = false
+        Boolean zip_outputs = true
         Int memory_gb = 4
-        Int disk_gb = 20
+        Int disk_gb = 100
     }
 
     # Determine reference_name based on organism or use provided value
