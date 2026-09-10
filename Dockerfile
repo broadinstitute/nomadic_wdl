@@ -58,8 +58,8 @@ ENV XDG_DATA_HOME=/opt/xdg-data
 
 # Bake in reference genomes from the repo, at the exact paths nomadic's
 # download/references.py expects: <user_data_dir>/resources/<source>/<release>/<file>.
-# Pf3D7 -> plasmodb/67, AgPEST -> vectorbase/67. Adding more files under
-# references/<Name>/ later (e.g. once AgPEST is populated) requires no Dockerfile change.
+# Pf3D7 -> plasmodb/67, AgPEST -> vectorbase/67. Adding more references later just
+# means adding a references/<Name>/ folder in the repo plus a COPY line here.
 COPY references/Pf3D7/ ${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/
 COPY references/AgPEST/ ${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/
 
@@ -70,7 +70,8 @@ RUN nomadic --help >/dev/null \
  && gsutil version -l | head -n 20 \
  && zip -v | head -n 2 \
  && python --version \
- && test -s "${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/PlasmoDB-67_Pfalciparum3D7_Genome.fasta"
+ && test -s "${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/PlasmoDB-67_Pfalciparum3D7_Genome.fasta" \
+ && test -s "${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/VectorBase-67_AgambiaePEST_Genome.fasta"
 
 WORKDIR /work
 CMD ["bash"]
