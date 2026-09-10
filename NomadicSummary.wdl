@@ -1,0 +1,107 @@
+version 1.0
+
+workflow NomadicSummary {
+    input {
+        Array[File] zipped_outputs
+        # One-column CSV with header `sample_id`, listing samples to include. GCS path.
+        File samples_to_include
+        String summary_name
+        String output_bucket_name
+        Int memory_gb = 4
+        Int disk_gb = 100
+        String docker_name = "us.gcr.io/broad-gotc-prod/nomadic:latest"
+    }
+
+    # Normalize output_bucket_name by removing gs:// and any trailing slash.
+    String normalized_bucket_name = sub(sub(output_bucket_name, "^gs://", ""), "/$", "")
+
+    call Summarize {
+        input:
+            zipped_outputs = zipped_outputs,
+            samples_to_include = samples_to_include,
+            summary_name = summary_name,
+            bucket_name = normalized_bucket_name,
+            memory_gb = memory_gb,
+            disk_gb = disk_gb,
+            docker_name = docker_name
+    }
+
+    output {
+        String zipped_output_file = Summarize.zipped_output_file
+        String unzipped_output_dir = Summarize.unzipped_output_dir
+    }
+}
+
+task Summarize {
+    input {
+        Array[File] zipped_outputs
+        File samples_to_include
+        String summary_name
+        String bucket_name
+        String docker_name
+        Int memory_gb
+        Int disk_gb
+    }
+
+    command <<<
+        set -euo pipefail
+
+        START_TIME=$(date +%s)
+        timestamp() {
+            local now=$(date +%s)
+            local elapsed=$((now - START_TIME))
+            printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
+        }
+
+        # Unzip all nomadic zipped outputs into a single directory on the VM.
+        UNZIP_DIR="unzipped_outputs"
+        mkdir -p "$UNZIP_DIR"
+
+        cat > zip_manifest.txt <<'EOF'
+~{sep="\n" zipped_outputs}
+EOF
+
+        while IFS= read -r zip_path; do
+            echo "Time elapsed: $(timestamp) - Unzipping $zip_path"
+            unzip -q "$zip_path" -d "$UNZIP_DIR"
+        done < zip_manifest.txt
+
+        # Each nomadic zip extracts to results/<experiment_name>/ (see Nomadic.wdl);
+        # collect those experiment directories to pass to `nomadic summarize`.
+        mapfile -t EXPERIMENT_DIRS < <(find "$UNZIP_DIR/results" -mindepth 1 -maxdepth 1 -type d | sort)
+
+        echo "Time elapsed: $(timestamp) - Running nomadic summarize for ~{summary_name}"
+        nomadic summarize "${EXPERIMENT_DIRS[@]}" \
+            --metadata_csv ~{samples_to_include} \
+            --summary_name ~{summary_name} \
+            --no-dashboard \
+            --output-dir output/
+
+        echo "$(pwd)/output" > unzipped_output_dir.txt
+
+        # Zip up the summary output
+        echo "Time elapsed: $(timestamp) - Zipping summary output"
+        zip -q -r output.zip output/
+
+        # Copy the zipped output to GCS
+        date_str=$(date +%Y_%m_%d_%H_%M)
+        OUTPUT_DIR="gs://~{bucket_name}/summarize/output/~{summary_name}/${date_str}/"
+        ZIP_PATH="${OUTPUT_DIR}output.zip"
+        echo "Time elapsed: $(timestamp) - Copying zipped output to ${ZIP_PATH}"
+        gcloud storage cp output.zip "${ZIP_PATH}"
+        echo "${ZIP_PATH}" > zipped_output_file.txt
+
+        echo "Time elapsed: $(timestamp) - Done"
+    >>>
+
+    runtime {
+        docker: docker_name
+        memory: "~{memory_gb} GB"
+        disks: "local-disk ~{disk_gb} HDD"
+    }
+
+    output {
+        String zipped_output_file = read_string("zipped_output_file.txt")
+        String unzipped_output_dir = read_string("unzipped_output_dir.txt")
+    }
+}
