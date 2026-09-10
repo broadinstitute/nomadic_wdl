@@ -134,9 +134,8 @@ task RunNomadic {
             exit 1
         fi
 
-        # Copy the reference
-        echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
-        nomadic download --reference_name ~{reference_name}
+        # Reference genomes are baked into the docker image (see Dockerfile), so no
+        # `nomadic download` step is needed here.
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
