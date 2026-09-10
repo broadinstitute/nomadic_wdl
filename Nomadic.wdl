@@ -18,6 +18,7 @@ workflow Nomadic {
         Boolean zip_outputs = true
         Int memory_gb = 4
         Int disk_gb = 100
+        String docker_image = "us.gcr.io/broad-gotc-prod/nomadic:latest"
     }
 
     # Determine reference_name based on organism or use provided value
@@ -74,7 +75,8 @@ workflow Nomadic {
             preserve_barcode_files = preserve_barcode_files,
             zip_outputs = zip_outputs,
             memory_gb = memory_gb,
-            disk_gb = disk_gb
+            disk_gb = disk_gb,
+            docker_image = docker_image
     }
 
     output {
@@ -98,6 +100,7 @@ task RunNomadic {
         Boolean zip_outputs
         Int memory_gb
         Int disk_gb
+        String docker_image
     }
 
     command <<<
@@ -134,9 +137,8 @@ task RunNomadic {
             exit 1
         fi
 
-        # Copy the reference
-        echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
-        nomadic download --reference_name ~{reference_name}
+        # Reference genomes are baked into the docker image (see Dockerfile), so no
+        # `nomadic download` step is needed here.
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
@@ -185,7 +187,7 @@ task RunNomadic {
     >>>
 
     runtime {
-        docker: "us.gcr.io/broad-gotc-prod/nomadic:latest"
+        docker: docker_image
         memory: "~{memory_gb} GB"
         disks: "local-disk ~{disk_gb} HDD"
     }

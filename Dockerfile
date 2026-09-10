@@ -50,13 +50,41 @@ RUN conda config --system --remove-key channels || true \
 # Make the env the default.
 ENV PATH=/opt/conda/envs/${CONDA_ENV}/bin:/opt/conda/bin:$PATH
 
+# Fix nomadic's data directory to a known, absolute path rather than relying on
+# $HOME (platformdirs' user_data_dir honors $XDG_DATA_HOME when set). This is where
+# `nomadic download` would normally place reference genomes; we bake them in below
+# instead, so the WDL never has to call `nomadic download` at runtime.
+ENV XDG_DATA_HOME=/opt/xdg-data
+
+# Bake in reference genomes from the repo, at the exact paths nomadic's
+# download/references.py expects: <user_data_dir>/resources/<source>/<release>/<file>.
+# Pf3D7 -> plasmodb/67, AgPEST -> vectorbase/67. Adding more references later just
+# means adding a references/<Name>/ folder in the repo plus a COPY line here.
+COPY references/Pf3D7/ ${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/
+COPY references/AgPEST/ ${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/
+
 # Sanity checks at build time.
+# The reference fasta size check (>1MB) matters specifically because these files are
+# stored in Git LFS: if the build context was checked out without `git lfs pull`, the
+# path exists but only holds a ~130-byte LFS pointer stub, not the real genome. A plain
+# `test -s` (non-empty) would pass on that stub and silently ship a broken image.
 RUN nomadic --help >/dev/null \
  && samtools --version | head -n 2 \
  && bcftools --version | head -n 2 \
  && gsutil version -l | head -n 20 \
  && zip -v | head -n 2 \
- && python --version
+ && python --version \
+ && for f in \
+      "${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/PlasmoDB-67_Pfalciparum3D7_Genome.fasta" \
+      "${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/VectorBase-67_AgambiaePEST_Genome.fasta" \
+    ; do \
+      size=$(stat -c%s "$f"); \
+      if [ "$size" -lt 1000000 ]; then \
+        echo "ERROR: $f is only ${size} bytes - looks like an unfetched Git LFS pointer" \
+             "file, not the real reference genome. Run 'git lfs pull' before building." >&2; \
+        exit 1; \
+      fi; \
+    done
 
 WORKDIR /work
 CMD ["bash"]
