@@ -19,7 +19,7 @@ ARG CONDA_ENV=nomadic
 # Install gsutil via Google Cloud SDK (apt), not conda.
 # This avoids python_abi pinning conflicts in conda, and is the most widely supported install path.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl gnupg zip \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg zip unzip \
  && mkdir -p /etc/apt/keyrings \
  && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
     | gpg --dearmor -o /etc/apt/keyrings/cloud.google.gpg \
@@ -42,7 +42,7 @@ RUN conda config --system --remove-key channels || true \
  && conda config --system --add channels defaults \
  && mamba create -n "${CONDA_ENV}" -y \
         python=3.11 \
-        bioconda::nomadic=0.8.0 \
+        bioconda::nomadic=0.9.0 \
         bioconda::bcftools \
         conda-forge::gsl \
  && conda clean -a -f
@@ -69,10 +69,12 @@ COPY references/AgPEST/ ${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/
 # path exists but only holds a ~130-byte LFS pointer stub, not the real genome. A plain
 # `test -s` (non-empty) would pass on that stub and silently ship a broken image.
 RUN nomadic --help >/dev/null \
+ && nomadic summarize --help >/dev/null \
  && samtools --version | head -n 2 \
  && bcftools --version | head -n 2 \
  && gsutil version -l | head -n 20 \
  && zip -v | head -n 2 \
+ && unzip -v | head -n 2 \
  && python --version \
  && for f in \
       "${XDG_DATA_HOME}/nomadic/resources/plasmodb/67/PlasmoDB-67_Pfalciparum3D7_Genome.fasta" \

@@ -83,7 +83,15 @@ EOF
         echo "Time elapsed: $(timestamp) - Zipping summary output"
         zip -q -r output.zip output/
 
-        # Copy the zipped output to GCS
+        # Copy the zipped output to GCS.
+        # `gcloud` (unlike `gsutil`) doesn't auto-detect the VM's attached service
+        # account in a non-interactive container - it needs an explicit credential.
+        # Fetch a short-lived access token from the GCE metadata server instead of
+        # requiring `gcloud auth login` or a service account key file.
+        export CLOUDSDK_AUTH_ACCESS_TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+            | grep -Po '"access_token":"\K[^"]*')
+
         date_str=$(date +%Y_%m_%d_%H_%M)
         OUTPUT_DIR="gs://~{bucket_name}/summarize/output/~{summary_name}/${date_str}/"
         ZIP_PATH="${OUTPUT_DIR}output.zip"
