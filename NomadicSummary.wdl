@@ -77,13 +77,6 @@ EOF
             --no-dashboard \
             --output-dir output/
 
-        echo "$(pwd)/output" > unzipped_output_dir.txt
-
-        # Zip up the summary output
-        echo "Time elapsed: $(timestamp) - Zipping summary output"
-        zip -q -r output.zip output/
-
-        # Copy the zipped output to GCS.
         # `gcloud` (unlike `gsutil`) doesn't auto-detect the VM's attached service
         # account in a non-interactive container - it needs an explicit credential.
         # Fetch a short-lived access token from the GCE metadata server instead of
@@ -94,6 +87,17 @@ EOF
 
         date_str=$(date +%Y_%m_%d_%H_%M)
         OUTPUT_DIR="gs://~{bucket_name}/summarize/output/~{summary_name}/${date_str}/"
+        echo "${OUTPUT_DIR}" > unzipped_output_dir.txt
+
+        # Copy the unzipped summary output to GCS
+        echo "Time elapsed: $(timestamp) - Copying unzipped output to ${OUTPUT_DIR}"
+        gcloud storage rsync --recursive output/ "${OUTPUT_DIR}"
+
+        # Zip up the summary output
+        echo "Time elapsed: $(timestamp) - Zipping summary output"
+        zip -q -r output.zip output/
+
+        # Copy the zipped output to GCS
         ZIP_PATH="${OUTPUT_DIR}output.zip"
         echo "Time elapsed: $(timestamp) - Copying zipped output to ${ZIP_PATH}"
         gcloud storage cp output.zip "${ZIP_PATH}"
