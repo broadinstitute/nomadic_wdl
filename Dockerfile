@@ -19,7 +19,7 @@ ARG CONDA_ENV=nomadic
 # Install gsutil via Google Cloud SDK (apt), not conda.
 # This avoids python_abi pinning conflicts in conda, and is the most widely supported install path.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl gnupg zip unzip \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg zip unzip git \
  && mkdir -p /etc/apt/keyrings \
  && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
     | gpg --dearmor -o /etc/apt/keyrings/cloud.google.gpg \
@@ -50,6 +50,24 @@ RUN conda config --system --remove-key channels || true \
 # Make the env the default.
 ENV PATH=/opt/conda/envs/${CONDA_ENV}/bin:/opt/conda/bin:$PATH
 
+# Install pyops-service-toolkit (module name `ops_utils`) for the
+# combine_change_files_to_terra.py script's CSV handling and Terra upload, in its
+# own conda env - NOT the nomadic env. pyops-service-toolkit's dependency chain
+# (pandas, pydantic, etc. via pip) pulls in versions that conflict with nomadic's
+# own conda-installed pandas/dash/pydantic; pip wheel pandas is also built against
+# a newer glibc/libstdc++ than this image provides, which breaks nomadic's own
+# pandas import (ImportError: GLIBCXX_3.4.29 not found) if installed into the same
+# env. Keeping it fully separate avoids both problems.
+RUN mamba create -n terra_upload -y python=3.11 pip \
+ && conda clean -a -f
+RUN /opt/conda/envs/terra_upload/bin/pip install \
+    "git+https://github.com/broadinstitute/pyops-service-toolkit.git@v12.6.0#egg=pyops-service-toolkit"
+
+# Add the script that combines nomadic's per-sample aa_changes CSVs and uploads
+# them to a Terra data table. Run it with the terra_upload env's python, not the
+# default `python` (which is nomadic's env and does not have ops_utils installed).
+COPY scripts/combine_change_files_to_terra.py /usr/local/bin/combine_change_files_to_terra.py
+
 # Fix nomadic's data directory to a known, absolute path rather than relying on
 # $HOME (platformdirs' user_data_dir honors $XDG_DATA_HOME when set). This is where
 # `nomadic download` would normally place reference genomes; we bake them in below
@@ -73,6 +91,8 @@ COPY references/AgPEST/ ${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/
 # `test -s` (non-empty) would pass on that stub and silently ship a broken image.
 RUN nomadic --help >/dev/null \
  && nomadic summarize --help >/dev/null \
+ && /opt/conda/envs/terra_upload/bin/python -c "import ops_utils" \
+ && /opt/conda/envs/terra_upload/bin/python /usr/local/bin/combine_change_files_to_terra.py --help >/dev/null \
  && samtools --version | head -n 2 \
  && bcftools --version | head -n 2 \
  && gsutil version -l | head -n 20 \

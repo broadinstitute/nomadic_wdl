@@ -7,6 +7,8 @@ workflow NomadicSummary {
         File samples_to_include
         String summary_name
         String output_bucket_name
+        String billing_project
+        String workspace_name
         Int memory_gb = 4
         Int disk_gb = 100
         String docker_name = "us.gcr.io/broad-gotc-prod/nomadic:latest"
@@ -26,9 +28,18 @@ workflow NomadicSummary {
             docker_name = docker_name
     }
 
+    call UploadChangesToTerra {
+        input:
+            aa_changes_files = Summarize.aa_changes_files,
+            billing_project = billing_project,
+            workspace_name = workspace_name,
+            docker_name = docker_name
+    }
+
     output {
         String zipped_output_file = Summarize.zipped_output_file
         String unzipped_output_dir = Summarize.unzipped_output_dir
+        Array[File] aa_changes_files = Summarize.aa_changes_files
     }
 }
 
@@ -115,5 +126,40 @@ EOF
     output {
         String zipped_output_file = read_string("zipped_output_file.txt")
         String unzipped_output_dir = read_string("unzipped_output_dir.txt")
+        # `nomadic summarize` writes the per-sample variant calls to
+        # <output-dir>/variants/aa_changes.csv (plus one aa_changes.<set>.csv per
+        # configured amplicon set) - this is the same glob nomadic itself uses
+        # internally (see summarize/main.py). This must NOT also match the
+        # separate, aggregated prevalence.aa_changes*.csv files nomadic writes to
+        # the same directory - those have a different (non-per-sample) schema, and
+        # the "aa_changes*.csv" pattern below only matches names starting with
+        # "aa_changes", so it correctly excludes them.
+        Array[File] aa_changes_files = glob("output/variants/aa_changes*.csv")
+    }
+}
+
+task UploadChangesToTerra {
+    input {
+        Array[File] aa_changes_files
+        String billing_project
+        String workspace_name
+        String docker_name
+    }
+
+    command <<<
+        set -euo pipefail
+
+        # ops_utils (pyops-service-toolkit) lives in its own conda env in the image,
+        # separate from nomadic's env - see Dockerfile for why.
+        /opt/conda/envs/terra_upload/bin/python /usr/local/bin/combine_change_files_to_terra.py \
+            --change_files ~{sep=" " aa_changes_files} \
+            --billing_project ~{billing_project} \
+            --workspace_name ~{workspace_name}
+    >>>
+
+    runtime {
+        docker: docker_name
+        memory: "4 GB"
+        disks: "local-disk 20 HDD"
     }
 }
