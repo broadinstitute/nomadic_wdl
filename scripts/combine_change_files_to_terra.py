@@ -59,6 +59,11 @@ def combine_change_files(change_files: list[str]) -> list[dict]:
         )
         for row in rows:
             row[ID_COLUMN] = f"{row['sample_id']}_{row['gene']}_{row['aa_change']}"
+            # Explicitly force every value to a string. CSV reads already return
+            # strings, but this guards against Terra's own numeric type-sniffing
+            # (e.g. "0.0") turning into a numeric attribute that renders blank.
+            for key, value in row.items():
+                row[key] = str(value)
         combined_rows.extend(rows)
     return combined_rows
 
@@ -88,4 +93,9 @@ if __name__ == "__main__":
         f"in {args.billing_project}/{args.workspace_name}"
     )
     terra_workspace.upload_metadata_with_batch_upsert(table_data=table_data)
-    logging.info("Done")
+
+    logging.info(f"Setting column order for Terra table '{TABLE_NAME}'")
+    terra_workspace.set_table_column_order(
+        column_order={TABLE_NAME: {"shown": EXPECTED_HEADERS, "hidden": []}}
+    )
+    logging.info("Upload complete.")

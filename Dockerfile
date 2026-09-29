@@ -61,7 +61,7 @@ ENV PATH=/opt/conda/envs/${CONDA_ENV}/bin:/opt/conda/bin:$PATH
 RUN mamba create -n terra_upload -y python=3.11 pip \
  && conda clean -a -f
 RUN /opt/conda/envs/terra_upload/bin/pip install \
-    "git+https://github.com/broadinstitute/pyops-service-toolkit.git@v12.6.0#egg=pyops-service-toolkit"
+    "git+https://github.com/broadinstitute/pyops-service-toolkit.git@v12.20.0#egg=pyops-service-toolkit"
 
 # Add the script that combines nomadic's per-sample aa_changes CSVs and uploads
 # them to a Terra data table. Run it with the terra_upload env's python, not the
