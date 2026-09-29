@@ -39,7 +39,6 @@ workflow NomadicSummary {
     output {
         String zipped_output_file = Summarize.zipped_output_file
         String unzipped_output_dir = Summarize.unzipped_output_dir
-        Array[File] aa_changes_files = Summarize.aa_changes_files
     }
 }
 
