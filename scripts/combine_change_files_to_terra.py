@@ -84,14 +84,15 @@ if __name__ == "__main__":
         workspace_name=args.workspace_name,
         request_util=request_util,
     )
-    logging.info(
-        f"Uploading {len(combined_rows)} rows to Terra table '{TABLE_NAME}' "
-        f"in {args.billing_project}/{args.workspace_name}"
-    )
-    terra_workspace.upload_metadata_with_batch_upsert(table_data=table_data)
 
     logging.info(f"Setting column order for Terra table '{TABLE_NAME}'")
     terra_workspace.set_table_column_order(
         column_order={TABLE_NAME: {"shown": EXPECTED_HEADERS, "hidden": []}}
     )
+
+    logging.info(
+        f"Uploading {len(combined_rows)} rows to Terra table '{TABLE_NAME}' "
+        f"in {args.billing_project}/{args.workspace_name}"
+    )
+    terra_workspace.upload_metadata_with_batch_upsert(table_data=table_data)
     logging.info("Upload complete.")
