@@ -8,7 +8,6 @@ Requires `pyops-service-toolkit` (module name `ops_utils`) to be installed, e.g.
 
 import argparse
 import logging
-import os
 from argparse import Namespace
 
 from ops_utils.csv_util import Csv
@@ -35,11 +34,10 @@ EXPECTED_HEADERS = [
     "nt_change",
 ]
 
-# Terra data tables require the entity id column to be named "entity:<table_name>_id".
+# upload_metadata_with_batch_upsert requires the id column to be named
+# "<table_name>_id" exactly.
 TABLE_NAME = "changes"
-ENTITY_ID_COLUMN = f"entity:{TABLE_NAME}_id"
-
-COMBINED_TSV_PATH = "combined_aa_changes.tsv"
+ID_COLUMN = f"{TABLE_NAME}_id"
 
 
 def get_args() -> Namespace:
@@ -60,7 +58,7 @@ def combine_change_files(change_files: list[str]) -> list[dict]:
             expected_headers=EXPECTED_HEADERS
         )
         for row in rows:
-            row[ENTITY_ID_COLUMN] = f"{row['sample_id']}_{row['gene']}_{row['aa_change']}"
+            row[ID_COLUMN] = f"{row['sample_id']}_{row['gene']}_{row['aa_change']}"
         combined_rows.extend(rows)
     return combined_rows
 
@@ -71,9 +69,12 @@ if __name__ == "__main__":
     combined_rows = combine_change_files(args.change_files)
     logging.info(f"Combined {len(combined_rows)} rows from {len(args.change_files)} file(s)")
 
-    combined_tsv = Csv(file_path=COMBINED_TSV_PATH).create_tsv_from_list_of_dicts(
-        combined_rows, header_list=[ENTITY_ID_COLUMN] + EXPECTED_HEADERS
-    )
+    table_data = {
+        TABLE_NAME: {
+            "table_id_column": ID_COLUMN,
+            "row_data": combined_rows,
+        }
+    }
 
     token = Token()
     request_util = RunRequest(token=token)
@@ -83,8 +84,8 @@ if __name__ == "__main__":
         request_util=request_util,
     )
     logging.info(
-        f"Uploading {combined_tsv} to Terra table '{TABLE_NAME}' "
+        f"Uploading {len(combined_rows)} rows to Terra table '{TABLE_NAME}' "
         f"in {args.billing_project}/{args.workspace_name}"
     )
-    terra_workspace.upload_metadata_to_workspace_table(entities_tsv=combined_tsv)
+    terra_workspace.upload_metadata_with_batch_upsert(table_data=table_data)
     logging.info("Done")
