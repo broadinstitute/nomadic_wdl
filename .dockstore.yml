@@ -12,4 +12,4 @@ workflows:
     primaryDescriptorPath: /NomadicSummary.wdl
     readMePath: /NomadicSummary.README.md
     testParameterFiles:
-      - /NomadicSummary.wdl
+      - /NomadicSummarize.wdl
