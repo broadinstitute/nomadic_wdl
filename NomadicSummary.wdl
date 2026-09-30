@@ -33,12 +33,15 @@ workflow NomadicSummary {
             aa_changes_files = Summarize.aa_changes_files,
             billing_project = billing_project,
             workspace_name = workspace_name,
+            bucket_name = normalized_bucket_name,
+            summary_name = summary_name,
             docker_name = docker_name
     }
 
     output {
         String zipped_output_file = Summarize.zipped_output_file
         String unzipped_output_dir = Summarize.unzipped_output_dir
+        String change_tsv_path = UploadChangesToTerra.change_tsv_path
     }
 }
 
@@ -142,23 +145,48 @@ task UploadChangesToTerra {
         Array[File] aa_changes_files
         String billing_project
         String workspace_name
+        String bucket_name
+        String summary_name
         String docker_name
     }
 
     command <<<
         set -euo pipefail
 
+        date_str=$(date +%Y_%m_%d_%H_%M)
+
         # ops_utils (pyops-service-toolkit) lives in its own conda env in the image,
-        # separate from nomadic's env - see Dockerfile for why.
+        # separate from nomadic's env - see Dockerfile for why. This combines the
+        # per-sample aa_changes files into one TSV (written locally as
+        # combined_aa_changes.tsv) and uploads a sample-centric "sample" table
+        # (plus a dated copy) to Terra; it no longer uploads the per-change data
+        # itself as a Terra table.
         /opt/conda/envs/terra_upload/bin/python /usr/local/bin/combine_change_files_to_terra.py \
             --change_files ~{sep=" " aa_changes_files} \
             --billing_project ~{billing_project} \
-            --workspace_name ~{workspace_name}
+            --workspace_name ~{workspace_name} \
+            --run_date_str "${date_str}"
+
+        # `gcloud` (unlike `gsutil`) doesn't auto-detect the VM's attached service
+        # account in a non-interactive container - it needs an explicit credential.
+        # Fetch a short-lived access token from the GCE metadata server instead of
+        # requiring `gcloud auth login` or a service account key file.
+        export CLOUDSDK_AUTH_ACCESS_TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+            | grep -Po '"access_token":"\K[^"]*')
+
+        CHANGE_TSV_PATH="gs://~{bucket_name}/summarize/output/~{summary_name}/${date_str}/change.tsv"
+        gcloud storage cp combined_aa_changes.tsv "${CHANGE_TSV_PATH}"
+        echo "${CHANGE_TSV_PATH}" > change_tsv_path.txt
     >>>
 
     runtime {
         docker: docker_name
         memory: "4 GB"
         disks: "local-disk 20 HDD"
+    }
+
+    output {
+        String change_tsv_path = read_string("change_tsv_path.txt")
     }
 }
