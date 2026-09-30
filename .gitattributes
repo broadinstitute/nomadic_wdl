@@ -1,0 +1,4 @@
+references/**/*.fasta filter=lfs diff=lfs merge=lfs -text
+references/**/*.fasta.fai filter=lfs diff=lfs merge=lfs -text
+references/**/*.gff filter=lfs diff=lfs merge=lfs -text
+references/**/*.bed filter=lfs diff=lfs merge=lfs -text

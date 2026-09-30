@@ -6,3 +6,10 @@ workflows:
     readMePath: /Nomadic.README.md
     testParameterFiles:
       - /Nomadic.wdl
+
+  - name: NomadicSummary
+    subclass: WDL
+    primaryDescriptorPath: /NomadicSummary.wdl
+    readMePath: /NomadicSummary.README.md
+    testParameterFiles:
+      - /NomadicSummary.wdl

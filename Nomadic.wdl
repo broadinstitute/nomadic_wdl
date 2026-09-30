@@ -18,6 +18,7 @@ workflow Nomadic {
         Boolean zip_outputs = true
         Int memory_gb = 4
         Int disk_gb = 100
+        String docker_image = "us.gcr.io/broad-gotc-prod/nomadic:latest"
     }
 
     # Determine reference_name based on organism or use provided value
@@ -36,7 +37,7 @@ workflow Nomadic {
 
     # Determine region_bed based on organism or use provided value
     File final_region_bed = if defined(organism) then (
-        # TODO: Update paths to point to the correct bucket and files once they are finalized
+        # TODO: Once we get IR file we should add it to beds dir and upload to docker use file straight from there
         if select_first([organism]) == "pfalciparum" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsMVP.amplicons.bed"
         else if select_first([organism]) == "agambiae" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsIR.amplicons.bed"
         else select_first([region_bed])
@@ -74,7 +75,8 @@ workflow Nomadic {
             preserve_barcode_files = preserve_barcode_files,
             zip_outputs = zip_outputs,
             memory_gb = memory_gb,
-            disk_gb = disk_gb
+            disk_gb = disk_gb,
+            docker_image = docker_image
     }
 
     output {
@@ -98,6 +100,7 @@ task RunNomadic {
         Boolean zip_outputs
         Int memory_gb
         Int disk_gb
+        String docker_image
     }
 
     command <<<
@@ -109,6 +112,14 @@ task RunNomadic {
             local elapsed=$((now - START_TIME))
             printf '%02d:%02d:%02d' $((elapsed/3600)) $(((elapsed%3600)/60)) $((elapsed%60))
         }
+
+        # `gcloud` (unlike `gsutil`) doesn't auto-detect the VM's attached service
+        # account in a non-interactive container - it needs an explicit credential.
+        # Fetch a short-lived access token from the GCE metadata server instead of
+        # requiring `gcloud auth login` or a service account key file.
+        export CLOUDSDK_AUTH_ACCESS_TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+            | grep -Po '"access_token":"\K[^"]*')
 
         # Normalize fastq_dir (remove trailing slash if present)
         FASTQ_DIR="~{fastq_dir}"
@@ -122,21 +133,20 @@ task RunNomadic {
         if [[ -n "$MINKNOW_DIR" ]]; then
             echo "Time elapsed: $(timestamp) - Copying MinKNOW data from $MINKNOW_DIR to minknow_data/"
             mkdir -p minknow_data
-            gsutil -q -m cp -r "$MINKNOW_DIR"/* minknow_data/
+            gcloud storage cp --recursive "$MINKNOW_DIR"/* minknow_data/
             INPUT_ARGS=(--minknow_dir minknow_data)
         elif [[ -n "$FASTQ_DIR" ]]; then
             echo "Time elapsed: $(timestamp) - Copying FASTQ data from $FASTQ_DIR to fastq_data/"
             mkdir -p fastq_data
-            gsutil -q -m cp -r "$FASTQ_DIR"/* fastq_data/
+            gcloud storage cp --recursive "$FASTQ_DIR"/* fastq_data/
             INPUT_ARGS=(--fastq_dir fastq_data)
         else
             echo "Time elapsed: $(timestamp) - ERROR: neither minknow_dir nor fastq_dir was provided" >&2
             exit 1
         fi
 
-        # Copy the reference
-        echo "Time elapsed: $(timestamp) - Copying reference ~{reference_name}"
-        nomadic download --reference_name ~{reference_name}
+        # Reference genomes are baked into the docker image (see Dockerfile), so no
+        # `nomadic download` step is needed here.
 
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
@@ -158,10 +168,10 @@ task RunNomadic {
 
         if [ "~{preserve_barcode_files}" == "true" ]; then
             # Copy all outputs, excluding only .incremental subdirectories
-            gsutil -m rsync -r -x '.*\.incremental/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
+            gcloud storage rsync --recursive --exclude='.*\.incremental/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
         else
             # Copy all outputs, excluding both .incremental and barcode subdirectories
-            gsutil -m rsync -r -x '.*\.incremental/.*|.*/barcode/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
+            gcloud storage rsync --recursive --exclude='.*\.incremental/.*|.*/barcode/.*' ./results/~{experiment_name}/ "${OUTPUT_DIR}"
         fi
 
         echo "Time elapsed: $(timestamp) - Copy complete"
@@ -176,7 +186,7 @@ task RunNomadic {
                 zip -q -r outputs.zip ./results/~{experiment_name}/ -x '*/.incremental/*' -x '*/barcode/*'
             fi
             ZIP_PATH="${OUTPUT_DIR}outputs.zip"
-            gsutil -q cp outputs.zip "${ZIP_PATH}"
+            gcloud storage cp outputs.zip "${ZIP_PATH}"
             echo "${ZIP_PATH}" > zipped_output_file.txt
             echo "Time elapsed: $(timestamp) - Zip complete"
         else
@@ -185,7 +195,7 @@ task RunNomadic {
     >>>
 
     runtime {
-        docker: "us.gcr.io/broad-gotc-prod/nomadic:latest"
+        docker: docker_image
         memory: "~{memory_gb} GB"
         disks: "local-disk ~{disk_gb} HDD"
     }
