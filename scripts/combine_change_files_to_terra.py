@@ -126,20 +126,11 @@ if __name__ == "__main__":
     )
 
     # Delete the existing "sample" table (if any) so it always reflects only this
-    # run's data - unlike upsert, which only adds/updates rows and would otherwise
-    # leave stale rows around for samples not present in this run.
+    # run's data and doesn't accumulate rows across runs. The dated table is preserved
     existing_tables = terra_workspace.get_workspace_entity_info(use_cache=False).json()
     if SAMPLE_TABLE_NAME in existing_tables:
         logging.info(f"Deleting existing '{SAMPLE_TABLE_NAME}' table before re-upload")
         terra_workspace.delete_entity_table(SAMPLE_TABLE_NAME)
-
-    # Column order must be set before each table has any data - setting it after
-    # requires clearing browser local storage to take effect. See
-    # https://support.terra.bio/hc/en-us/articles/7074648223515
-    for table_name in (SAMPLE_TABLE_NAME, dated_table_name):
-        terra_workspace.set_table_column_order(
-            column_order={table_name: {"shown": shown_columns, "hidden": []}}
-        )
 
     logging.info(f"Uploading {len(sample_rows)} sample rows to Terra table '{SAMPLE_TABLE_NAME}'")
     terra_workspace.upload_metadata_with_batch_upsert(
