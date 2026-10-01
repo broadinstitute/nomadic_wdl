@@ -115,8 +115,6 @@ if __name__ == "__main__":
     )
     shown_columns = change_columns
 
-    dated_table_name = f"{SAMPLE_TABLE_NAME}_{args.run_date_str}"
-
     token = Token()
     request_util = RunRequest(token=token)
     terra_workspace = TerraWorkspace(
@@ -142,15 +140,6 @@ if __name__ == "__main__":
         }
     )
 
-    logging.info(f"Uploading {len(sample_rows)} sample rows to dated Terra table '{dated_table_name}'")
-    terra_workspace.upload_metadata_with_batch_upsert(
-        table_data={
-            dated_table_name: {
-                "table_id_column": SAMPLE_ID_COLUMN,
-                "row_data": sample_rows,
-            }
-        },
-        force=True,
-    )
-
+    logging.info(f"Saving version '{args.run_date_str}' of the sample table for this run")
+    terra_workspace.save_entity_table_version(entity_type=SAMPLE_TABLE_NAME, version_name=args.run_date_str)
     logging.info("Upload complete.")
