@@ -35,13 +35,16 @@ workflow Nomadic {
         else select_first([caller])
     ) else select_first([caller])
 
-    # Determine region_bed based on organism or use provided value
-    File final_region_bed = if defined(organism) then (
-        # TODO: Once we get IR file we should add it to beds dir and upload to docker use file straight from there
-        if select_first([organism]) == "pfalciparum" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsMVP.amplicons.bed"
-        else if select_first([organism]) == "agambiae" then "gs://fc-e51e0216-60e9-4434-91df-3044195c8816/beds/nomadsIR.amplicons.bed"
-        else select_first([region_bed])
-    ) else select_first([region_bed])
+    # Determine region_bed based on organism or use provided value.
+    # Preset bed files are baked into the docker image (see Dockerfile) at a fixed
+    # path, so for those this is just a plain in-container path, not a File - the
+    # engine never localizes it. A custom region_bed stays a File so the engine
+    # localizes it normally.
+    String final_region_bed_path = if defined(organism) then (
+        if select_first([organism]) == "pfalciparum" then "/opt/nomadic/beds/nomadsMVP.amplicons.bed"
+        else if select_first([organism]) == "agambiae" then "/opt/nomadic/beds/nomadsIR.amplicons.bed"
+        else ""
+    ) else ""
 
     # Normalize bucket_name by removing gs:// and any trailing slash.
     String normalized_bucket_name = sub(sub(bucket_name, "^gs://", ""), "/$", "")
@@ -70,7 +73,8 @@ workflow Nomadic {
             run_name = run_name,
             reference_name = final_reference_name,
             caller = final_caller,
-            region_bed = final_region_bed,
+            region_bed_path = final_region_bed_path,
+            region_bed_override = region_bed,
             bucket_name = normalized_bucket_name,
             preserve_barcode_files = preserve_barcode_files,
             zip_outputs = zip_outputs,
@@ -94,7 +98,8 @@ task RunNomadic {
         String run_name
         String reference_name
         String caller
-        File region_bed
+        String region_bed_path
+        File? region_bed_override
         String bucket_name
         Boolean preserve_barcode_files
         Boolean zip_outputs
@@ -148,11 +153,22 @@ task RunNomadic {
         # Reference genomes are baked into the docker image (see Dockerfile), so no
         # `nomadic download` step is needed here.
 
+        # Preset region_bed files are also baked into the docker image (see
+        # Dockerfile); otherwise fall back to the engine-localized custom file.
+        REGION_BED="~{region_bed_path}"
+        if [[ -z "$REGION_BED" ]]; then
+            REGION_BED="~{select_first([region_bed_override, ""])}"
+        fi
+        if [[ -z "$REGION_BED" ]]; then
+            echo "Time elapsed: $(timestamp) - ERROR: no region_bed available - organism preset not recognized and no region_bed provided" >&2
+            exit 1
+        fi
+
         # Run nomadic process command
         echo "Time elapsed: $(timestamp) - Runing nomadic process for experiment ~{experiment_name}"
         nomadic process ~{experiment_name} \
             --metadata_csv ~{metadata_file} \
-            --region_bed ~{region_bed} \
+            --region_bed "$REGION_BED" \
             "${INPUT_ARGS[@]}" \
             --reference_name ~{reference_name} \
             --caller ~{caller} \

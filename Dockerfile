@@ -84,6 +84,12 @@ ENV XDG_DATA_HOME=/opt/xdg-data
 COPY references/Pf3D7/ ${XDG_DATA_HOME}/nomadic/resources/ensemblegenomes/63/
 COPY references/AgPEST/ ${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/
 
+# Bake in the preset region BED files from the repo's beds/ dir, at a fixed
+# path, so Nomadic.wdl can reference them directly instead of fetching from a
+# GCS bucket. Adding a new preset later just means adding a beds/<name>.bed
+# file in the repo; no new COPY line needed here.
+COPY beds/ /opt/nomadic/beds/
+
 # Sanity checks at build time.
 # The reference fasta size check (>1MB) matters specifically because these files are
 # stored in Git LFS: if the build context was checked out without `git lfs pull`, the
@@ -99,6 +105,8 @@ RUN nomadic --help >/dev/null \
  && zip -v | head -n 2 \
  && unzip -v | head -n 2 \
  && python --version \
+ && test -s /opt/nomadic/beds/nomadsMVP.amplicons.bed \
+ && test -s /opt/nomadic/beds/nomadsIR.amplicons.bed \
  && for f in \
       "${XDG_DATA_HOME}/nomadic/resources/ensemblegenomes/63/Plasmodium_falciparum.GCA000002765v3.dna.toplevel.fasta" \
       "${XDG_DATA_HOME}/nomadic/resources/vectorbase/67/VectorBase-67_AgambiaePEST_Genome.fasta" \
