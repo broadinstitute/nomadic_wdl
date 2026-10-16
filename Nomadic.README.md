@@ -6,7 +6,7 @@
 
 High-level behavior:
 
-- Chooses `reference_name`, `caller`, and `region_bed` from `organism` presets when `organism` is `pfalciparum` or `agambiae`.
+- Chooses `reference_name`, `caller`, and `region_bed` from `organism` presets when `organism` is `pfalciparum` or `agambiae`. Preset `region_bed` files are baked into the docker image (see `beds/` and `Dockerfile`), not fetched from GCS.
 - Accepts either `minknow_dir` or `fastq_dir` input data.
   - If `minknow_dir` is provided, it is used.
   - Else if `fastq_dir` is provided, it is used.
@@ -28,7 +28,7 @@ High-level behavior:
 | `run_name`               | yes         | `String`   | none                                                                | Groups outputs under `output/{run_name}/...`.                                                                  |
 | `reference_name`         | conditional | `String?`  | preset from `organism` or none                                      | Optional if `organism` is a recognized preset; otherwise required.                                             |
 | `caller`                 | conditional | `String?`  | preset from `organism` or none                                      | Optional if `organism` is a recognized preset; otherwise required.                                             |
-| `region_bed`             | conditional | `File?`    | preset from `organism` or none                                      | Optional if `organism` is a recognized preset; otherwise required.                                             |
+| `region_bed`             | conditional | `File?`    | preset from `organism` or none                                      | Optional if `organism` is a recognized preset (baked into the docker image); otherwise required.               |
 | `bucket_name`            | yes         | `String`   | none                                                                | Bucket root for defaults and final outputs. Accepts with or without `gs://`.                                   |
 | `preserve_barcode_files` | yes         | `Boolean`  | none                                                                | `true`: exclude only `.incremental`; `false`: exclude `.incremental` and `barcode` in copied/archived outputs. |
 | `zip_outputs`            | no          | `Boolean`  | `true`                                                              | If `true`, creates and uploads `outputs.zip`.                                                                  |
