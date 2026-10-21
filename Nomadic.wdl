@@ -1,5 +1,7 @@
 version 1.0
 
+import "TerraUtils.wdl" as Terra
+
 workflow Nomadic {
     input {
         String? organism
@@ -12,7 +14,6 @@ workflow Nomadic {
         String? reference_name
         String? caller
         File? region_bed
-        String bucket_name
         # TODO do we want to set a default true/false value here if one option is more common?
         Boolean preserve_barcode_files
         Boolean zip_outputs = true
@@ -20,6 +21,10 @@ workflow Nomadic {
         Int disk_gb = 100
         String docker_image = "us.gcr.io/broad-gotc-prod/nomadic:latest"
     }
+
+    # Fetch the metadata of the Terra workspace this run executes in; its bucket
+    # is used as the output bucket (previously a required `bucket_name` input).
+    call Terra.GetWorkspaceMetadata {}
 
     # Determine reference_name based on organism or use provided value
     String final_reference_name = if defined(organism) then (
@@ -46,8 +51,8 @@ workflow Nomadic {
         else ""
     ) else ""
 
-    # Normalize bucket_name by removing gs:// and any trailing slash.
-    String normalized_bucket_name = sub(sub(bucket_name, "^gs://", ""), "/$", "")
+    # Workspace bucket name (no gs:// prefix) from the workspace metadata.
+    String normalized_bucket_name = GetWorkspaceMetadata.bucket_name
 
     # Use provided fastq_dir when present; otherwise keep it empty.
     String final_fastq_dir = if defined(fastq_dir) then (select_first([fastq_dir])) else ""

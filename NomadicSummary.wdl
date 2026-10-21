@@ -1,21 +1,25 @@
 version 1.0
 
+import "TerraUtils.wdl" as Terra
+
 workflow NomadicSummary {
     input {
         Array[File] zipped_outputs
         # One-column CSV with header `sample_id`, listing samples to include. GCS path.
         File samples_to_include
         String summary_name
-        String output_bucket_name
-        String billing_project
-        String workspace_name
         Int memory_gb = 4
         Int disk_gb = 100
         String docker_name = "us.gcr.io/broad-gotc-prod/nomadic:latest"
     }
 
-    # Normalize output_bucket_name by removing gs:// and any trailing slash.
-    String normalized_bucket_name = sub(sub(output_bucket_name, "^gs://", ""), "/$", "")
+    # Fetch the metadata of the Terra workspace this run executes in; it supplies
+    # the output bucket, billing project and workspace name (previously the
+    # required inputs `output_bucket_name`, `billing_project`, `workspace_name`).
+    call Terra.GetWorkspaceMetadata {}
+
+    # Workspace bucket name (no gs:// prefix) from the workspace metadata.
+    String normalized_bucket_name = GetWorkspaceMetadata.bucket_name
 
     call Summarize {
         input:
@@ -31,8 +35,8 @@ workflow NomadicSummary {
     call UploadChangesToTerra {
         input:
             aa_changes_files = Summarize.aa_changes_files,
-            billing_project = billing_project,
-            workspace_name = workspace_name,
+            billing_project = GetWorkspaceMetadata.workspace_namespace,
+            workspace_name = GetWorkspaceMetadata.workspace_name,
             bucket_name = normalized_bucket_name,
             summary_name = summary_name,
             docker_name = docker_name
