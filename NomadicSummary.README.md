@@ -41,9 +41,6 @@ High-level behavior:
 | `zipped_outputs`      | yes      | `Array[File]`| none                                                | Zipped `nomadic` outputs (e.g. `Nomadic.wdl`'s `zipped_output_file`) to summarize. |
 | `samples_to_include`  | yes      | `File`       | none                                                | GCS path to a one-column CSV with header `sample_id`. Used as `--metadata_csv`.   |
 | `summary_name`        | yes      | `String`     | none                                                | Used as `--summary_name` and in the GCS output path.                              |
-| `output_bucket_name`  | yes      | `String`     | none                                                | Bucket root for final outputs. Accepts with or without `gs://`.                   |
-| `billing_project`     | yes      | `String`     | none                                                | Terra billing project for the `sample` table upload.                              |
-| `workspace_name`      | yes      | `String`     | none                                                | Terra workspace name for the `sample` table upload.                               |
 | `memory_gb`           | no       | `Int`        | `4`                                                 | Task runtime memory in GB (for `Summarize`).                                      |
 | `disk_gb`             | no       | `Int`        | `100`                                               | Task runtime local disk size in GB (for `Summarize`).                             |
 | `docker_name`         | no       | `String`     | `us.gcr.io/broad-gotc-prod/nomadic:latest`         | Docker image used to run `nomadic summarize` and the Terra upload script.          |
