@@ -68,10 +68,10 @@ Metadata file: gs://{bucket}/metadata/{experiment\_name}.csv
 
 If you supply one of pfalciparum or agambiae as the organism, the workflow will auto select the reference name, caller, and the region bed.
 
-| Provided organism name | Determined reference\_name | Determined caller | Determined region\_bed |
-| --- | --- | --- | --- |
-| pfalciparum | Pf3D7 | delve | gs://broad-malaria-public/nomads\_data/nomadsMVP.amplicons.bed |
-| agambiae | AgPEST | bcftools | gs://broad-malaria-public/nomads\_data/nomadsIR.amplicons.bed |
+| Provided organism name | Determined reference\_name | Determined caller | Determined region\_bed                                         |
+|------------------------|----------------------------|-------------------|----------------------------------------------------------------|
+| pfalciparum            | Pf3D7                      | delve             | gs://broad-malaria-public/nomads\_data/nomadsMVP.amplicons.bed |
+| agambiae               | AgPEST                     | bcftools          | gs://broad-malaria-public/nomads\_data/nomadsIR.amplicons.bed  |
 
 If you do NOT supply the organism then you will need to explicitly pass in the caller, reference\_name, and GCP path to the region\_bed.
 
@@ -123,8 +123,8 @@ If you are using the same organism across all your experiments and the MinKNOW a
 
 1. Create a TSV with the first column being entity:{table\_name}\_id. The example below is for a TSV containing rows being added to the experiment table. The entity column must go first in the TSV, so if there are other columns they must come after the entity column.
 
-| entity:experiment\_id |
-| --- |
+| entity:experiment\_id  |
+|------------------------|
 | 2025\_07\_28\_new\_dbs |
 | 2026\_01\_14\_new\_dbs |
 
@@ -158,22 +158,22 @@ Now you can configure your workflow inputs. By selecting “experiment” as you
 
 ![Screenshot: Setting Workflow Inputs and Outputs](https://raw.githubusercontent.com/broadinstitute/nomadic_wdl/main/imgs/nomadic_13_setting-workflow-inputs-outputs.png)
 
-| Variable Name | Required? | Input Value/Type | Default | Notes |
-| --- | --- | --- | --- | --- |
-| bucket\_name | Yes | String |  |  |
-| experiment\_name | Yes | String |  |  |
-| run\_name | Yes | String |  | The **run\_name** is the run name for all experiments run at this time. It is used to format the output path of the workflow: gs://{bucket}/output/{run\_name}/{experiment\_name}/{date\_str}/. |
-| minknow\_dir | No | String |  | If the **minknow\_dir** is not provided and fastq\_dir is not provided, the workflow will assume MinKNOW directory is gs://{bucket}//minknow/{experiment\_name} |
-| fastq\_dir | No | String |  |  |
-| zip\_outputs | No | Boolean | true | When the default is left, the workflow will zip all outputs and put the zip file in the GCP output directory. This can make it easier for downloading outputs. It’s not possible to download GCP directories, but zipped files can be downloaded directly from Terra. |
-| metadata\_file | No | File |  | If the **metadata\_file** is not provided, the workflow will assume the path to file is gs://{bucket\_name}/metadata/{experiment\_name}.csv |
-| preserve\_barcode\_files | Yes | Boolean |  | **preserve\_barcode\_files** must explicitly be set, and determines whether all outputs will be copied to the experiment’s output directory |
-| caller | Not if organism is provided | String |  |  |
-| disk\_gb | No | Integer | 100 | Can be increased from the default if the workflow is failing with insufficient disk errors. |
-| memory\_gb | No | Integer | 4 | Can be increased from the default if the workflow is failing with insufficient memory errors. |
-| organism | Not if caller is provided, reference\_name, and region\_bed is provided | String |  |  |
-| reference\_name | Not if organism is provided | String |  |  |
-| region\_bed | Not if organism is provided | File |  |  |
+| Variable Name            | Required?                                                               | Input Value/Type | Default | Notes                                                                                                                                                                                                                                                                 |
+|--------------------------|-------------------------------------------------------------------------|------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| bucket\_name             | Yes                                                                     | String           |         |                                                                                                                                                                                                                                                                       |
+| experiment\_name         | Yes                                                                     | String           |         |                                                                                                                                                                                                                                                                       |
+| run\_name                | Yes                                                                     | String           |         | The **run\_name** is the run name for all experiments run at this time. It is used to format the output path of the workflow: gs://{bucket}/output/{run\_name}/{experiment\_name}/{date\_str}/.                                                                       |
+| minknow\_dir             | No                                                                      | String           |         | If the **minknow\_dir** is not provided and fastq\_dir is not provided, the workflow will assume MinKNOW directory is gs://{bucket}//minknow/{experiment\_name}                                                                                                       |
+| fastq\_dir               | No                                                                      | String           |         |                                                                                                                                                                                                                                                                       |
+| zip\_outputs             | No                                                                      | Boolean          | true    | When the default is left, the workflow will zip all outputs and put the zip file in the GCP output directory. This can make it easier for downloading outputs. It’s not possible to download GCP directories, but zipped files can be downloaded directly from Terra. |
+| metadata\_file           | No                                                                      | File             |         | If the **metadata\_file** is not provided, the workflow will assume the path to file is gs://{bucket\_name}/metadata/{experiment\_name}.csv                                                                                                                           |
+| preserve\_barcode\_files | Yes                                                                     | Boolean          |         | **preserve\_barcode\_files** must explicitly be set, and determines whether all outputs will be copied to the experiment’s output directory                                                                                                                           |
+| caller                   | Not if organism is provided                                             | String           |         |                                                                                                                                                                                                                                                                       |
+| disk\_gb                 | No                                                                      | Integer          | 100     | Can be increased from the default if the workflow is failing with insufficient disk errors.                                                                                                                                                                           |
+| memory\_gb               | No                                                                      | Integer          | 4       | Can be increased from the default if the workflow is failing with insufficient memory errors.                                                                                                                                                                         |
+| organism                 | Not if caller is provided, reference\_name, and region\_bed is provided | String           |         |                                                                                                                                                                                                                                                                       |
+| reference\_name          | Not if organism is provided                                             | String           |         |                                                                                                                                                                                                                                                                       |
+| region\_bed              | Not if organism is provided                                             | File             |         |                                                                                                                                                                                                                                                                       |
 
 *A few notes about wiring these inputs:*
 
@@ -244,24 +244,18 @@ Now you can configure your workflow inputs. By selecting “experiment\_set” a
 
 ![Screenshot: Setting Workflow Inputs and Outputs](https://raw.githubusercontent.com/broadinstitute/nomadic_wdl/main/imgs/summarize_23_setting-workflow-inputs-outputs.png)
 
-| Variable Name | Required? | Input Value | Default |
-| --- | --- | --- | --- |
-| zipped\_outputs | Yes | String |  |
-| samples\_to\_include | Yes | String |  |
-| summary\_name | Yes | String |  |
-| output\_bucket\_name | Yes | String |  |
-| billing\_project | Yes | String |  |
-| workspace\_name | Yes | String |  |
-| memory\_gb | No | Integer | 4 (gb) |
-| disk\_gb | No | Integer | 100 |
-| docker\_name | No | String | `us.gcr.io/broad-gotc-prod/nomadic:latest` |
+| Variable Name        | Required? | Input Value | Default                                    |
+|----------------------|-----------|-------------|--------------------------------------------|
+| zipped\_outputs      | Yes       | String      |                                            |
+| samples\_to\_include | Yes       | String      |                                            |
+| summary\_name        | Yes       | String      |                                            |
+| memory\_gb           | No        | Integer     | 4 (gb)                                     |
+| disk\_gb             | No        | Integer     | 100                                        |
+| docker\_name         | No        | String      | `us.gcr.io/broad-gotc-prod/nomadic:latest` |
 
 *A few notes about wiring these inputs:*
 
 - In the workflow inputs configuration, all strings are required to be wrapped in quotes (ie. “gates-malaria”, not just gates-malaria).
-- The **output\_bucket\_name** is the google cloud bucket where all final outputs will be written. Can be provided with or without the gs:// prefix.
-- **billing\_project** is the billing project of the workspace where the workflow is being run. It is required to upload the data to the sample table.
-- **workspace\_name** is the workspace name where workflow is being run. It is needed to upload data to the sample table.
 - **memory\_gb** and **disk\_gb** both have defaults, but can be increased if the workflow is failing with insufficient memory or disk errors.
 
 After updating the inputs you can move to the “OUTPUTS” configuration. Select “Use defaults” and then select the “Save” button. This configuration determines the column header that is added to your data table pointing to where the experiment outputs were written to. Changing this simply changes the column header for where the output paths are written.
@@ -337,11 +331,11 @@ Outputs are written to `{gcs_out_root_dir}/{experiment_name}/{timestamp}/`, wher
 
 The `config` input tells Dorado which basecalling model to use. The simplest values are an accuracy level, and Dorado picks the right model for your flow cell chemistry from the POD5 files:
 
-| Value | Meaning | When to use |
-| --- | --- | --- |
-| `fast` | Fastest, least accurate | Quick checks only |
-| `hac` | High accuracy | Reasonable compromise when turnaround matters |
-| `sup` | Super accuracy (slowest, several times the GPU time of `hac`) | Recommended for variant calling and drug-resistance markers |
+| Value  | Meaning                                                       | When to use                                                 |
+|--------|---------------------------------------------------------------|-------------------------------------------------------------|
+| `fast` | Fastest, least accurate                                       | Quick checks only                                           |
+| `hac`  | High accuracy                                                 | Reasonable compromise when turnaround matters               |
+| `sup`  | Super accuracy (slowest, several times the GPU time of `hac`) | Recommended for variant calling and drug-resistance markers |
 
 You can pin a model version (e.g. `sup@v5.0.0`) or give a full model name (e.g. `dna_r10.4.1_e8.2_400bps_sup@v5.0.0`) if you need results to be reproducible across runs. The model must exist in Dorado 1.4.0.
 
@@ -356,9 +350,9 @@ Raw POD5 data are uploaded in the same way as MinKNOW outputs in the Nomadic tab
 
 The workflow reads its inputs from the `experiment` table (the same table used by Nomadic), so add the basecalling columns to that table, either by editing it in the Terra interface or by uploading a TSV, exactly as described in the Nomadic tab. The columns the workflow uses are:
 
-| entity:experiment\_id | fast5\_dir | config | barcode\_kit | instrument | flow\_cell\_id |
-| --- | --- | --- | --- | --- | --- |
-| 2026\_01\_14\_new\_dbs | gs://{bucket}/minknow/2026\_01\_14\_new\_dbs/…/pod5\_pass | sup | SQK-NBD114-96 | MinION | FAX12345 |
+| entity:experiment\_id  | fast5\_dir                                                | config | barcode\_kit  | instrument | flow\_cell\_id |
+|------------------------|-----------------------------------------------------------|--------|---------------|------------|----------------|
+| 2026\_01\_14\_new\_dbs | gs://{bucket}/minknow/2026\_01\_14\_new\_dbs/…/pod5\_pass | sup    | SQK-NBD114-96 | MinION     | FAX12345       |
 
 Only `fast5_dir` and `config` are needed for the workflow to run; `barcode_kit` is needed if the library was barcoded (which it almost always is for Nomadic panels); `instrument` and `flow_cell_id` are optional and only recorded in the summary file. The column name `fast5_dir` is historical: it should hold the path to the POD5 folder.
 
@@ -375,20 +369,20 @@ Below are directions specifically for configuring the ONTBasecallDorado inputs. 
 
 Inputs are configured under the "INPUTS" tab using the `this.{column_header}` syntax. Note that the workflow's internal name is `Dorado`, so inputs appear as `Dorado.sample_name`, `Dorado.config`, and so on. `[screenshot]`
 
-| Variable Name | Required? | Input Value/Type | Default | Notes |
-| --- | --- | --- | --- | --- |
-| sample\_name | Yes | String |  | Set to `this.experiment_id`. Used to name the output folder: `{gcs_out_root_dir}/{sample_name}/{timestamp}/`. Avoid spaces and special characters. |
-| gcs\_fast5\_dir | Yes | String |  | Set to `this.fast5_dir`. The `gs://` path to the **folder** of POD5 files, not to a single file. Sub-folders are searched. |
-| config | Yes | String |  | Set to `this.config`. Basecalling model: `fast`, `hac`, `sup`, or a full model name (see Basecalling models above). |
-| barcode\_kit | No | String |  | Set to `this.barcode_kit`. ONT kit code exactly as ONT writes it (e.g. `SQK-NBD114-96`, `SQK-RBK114-96`). If left empty the reads are not demultiplexed. |
-| instrument | No | String | "unknown" | Set to `this.instrument`. Recorded in `final_summary.txt` only. |
-| flow\_cell\_id | No | String | "unknown" | Set to `this.flow_cell_id`. Recorded in `final_summary.txt` only. |
-| protocol\_run\_id | No | String | read from the data | Run ID; taken from the POD5 metadata if not provided. Normally leave blank. |
-| num\_shards | No | Integer | 1 + (number of files ÷ 100) | Number of parallel basecalling batches. Normally leave blank. |
-| RefFasta | No | File | Pf3D7 (PlasmoDB-61) FASTA | Pre-filled. If provided, Dorado aligns the reads to this genome during basecalling. |
-| RefIndex | No | File | Pf3D7 index | Pre-filled. |
-| RefFastaDict | No | File | Pf3D7 dictionary | Pre-filled. |
-| gcs\_out\_root\_dir | Yes | String | `[fill in]` | Pre-filled. Bucket folder under which all basecalling outputs are written. |
+| Variable Name       | Required? | Input Value/Type | Default                     | Notes                                                                                                                                                    |
+|---------------------|-----------|------------------|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| sample\_name        | Yes       | String           |                             | Set to `this.experiment_id`. Used to name the output folder: `{gcs_out_root_dir}/{sample_name}/{timestamp}/`. Avoid spaces and special characters.       |
+| gcs\_fast5\_dir     | Yes       | String           |                             | Set to `this.fast5_dir`. The `gs://` path to the **folder** of POD5 files, not to a single file. Sub-folders are searched.                               |
+| config              | Yes       | String           |                             | Set to `this.config`. Basecalling model: `fast`, `hac`, `sup`, or a full model name (see Basecalling models above).                                      |
+| barcode\_kit        | No        | String           |                             | Set to `this.barcode_kit`. ONT kit code exactly as ONT writes it (e.g. `SQK-NBD114-96`, `SQK-RBK114-96`). If left empty the reads are not demultiplexed. |
+| instrument          | No        | String           | "unknown"                   | Set to `this.instrument`. Recorded in `final_summary.txt` only.                                                                                          |
+| flow\_cell\_id      | No        | String           | "unknown"                   | Set to `this.flow_cell_id`. Recorded in `final_summary.txt` only.                                                                                        |
+| protocol\_run\_id   | No        | String           | read from the data          | Run ID; taken from the POD5 metadata if not provided. Normally leave blank.                                                                              |
+| num\_shards         | No        | Integer          | 1 + (number of files ÷ 100) | Number of parallel basecalling batches. Normally leave blank.                                                                                            |
+| RefFasta            | No        | File             | Pf3D7 (PlasmoDB-61) FASTA   | Pre-filled. If provided, Dorado aligns the reads to this genome during basecalling.                                                                      |
+| RefIndex            | No        | File             | Pf3D7 index                 | Pre-filled.                                                                                                                                              |
+| RefFastaDict        | No        | File             | Pf3D7 dictionary            | Pre-filled.                                                                                                                                              |
+| gcs\_out\_root\_dir | Yes       | String           | `[fill in]`                 | Pre-filled. Bucket folder under which all basecalling outputs are written.                                                                               |
 
 A few notes about wiring these inputs:
 
